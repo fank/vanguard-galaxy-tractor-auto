@@ -5,6 +5,7 @@ using Behaviour.Equipment.Module;
 using Behaviour.Tractoring;
 using Behaviour.Weapons;
 using HarmonyLib;
+using System.Reflection;
 using Source.Personnel;
 using Source.Player;
 using Source.Util;
@@ -21,13 +22,24 @@ internal static class TractorModulePatches
     // so we survive null windows during init.
     private static Skilltree? _autopilotTree;
 
+    // Vanilla's private crew-pod target filter (blocks hostile/non-roll crew pods when
+    // crew/brig space is full). Not exposed by the publicized stub we compile against,
+    // so we bind it reflectively; null on older builds that lack it → treated as not
+    // blocked, which matches those builds' vanilla behavior.
+    private static readonly MethodInfo? _isCrewPodTargetingBlocked = AccessTools.Method(
+        typeof(TractorModule), "IsCrewPodTargetingBlocked", new[] { typeof(TractorableItem) });
+
+    private static bool IsCrewPodTargetingBlocked(TractorModule module, TractorableItem item)
+        => _isCrewPodTargetingBlocked != null
+            && (bool)_isCrewPodTargetingBlocked.Invoke(module, new object[] { item });
+
     private static bool Enabled => Plugin.Instance != null && Plugin.Instance.CfgEnabled.Value;
 
     // Live Engineering-tree mastery for the player commander. Returns 0 (→ vanilla)
     // whenever the player, the tree, or its skill-tree data is unavailable.
     private static int ResolveMasteryLevel()
     {
-        if (GamePlayer.current == null)
+        if (GamePlayer.current == null || GamePlayer.current.commander == null)
             return 0;
 
         if (_autopilotTree == null)
@@ -120,6 +132,7 @@ internal static class TractorModulePatches
             if (target is TractorableItem item
                 && !item.isTractored
                 && item.CanBeAutoTractoredBy(__instance.parent)
+                && !IsCrewPodTargetingBlocked(__instance, item)
                 && !filtered.Contains(item))
             {
                 filtered.Add(item);
