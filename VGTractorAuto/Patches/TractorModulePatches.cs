@@ -15,8 +15,10 @@ namespace VGTractorAuto.Patches;
 [HarmonyPatch(typeof(TractorModule))]
 internal static class TractorModulePatches
 {
-    // Cached autopilot (Engineering / "PromptEngineering") skill tree. Resolved
-    // lazily on first successful lookup so we survive null windows during init.
+    // Cached "Autopilot" skill tree — internally the Engineering / "PromptEngineering"
+    // specialization (IdleManager feeds its mastery XP while autopilot runs). We reuse
+    // its mastery level as the scaling axis. Resolved lazily on first successful lookup
+    // so we survive null windows during init.
     private static Skilltree? _autopilotTree;
 
     private static bool Enabled => Plugin.Instance != null && Plugin.Instance.CfgEnabled.Value;
@@ -84,6 +86,10 @@ internal static class TractorModulePatches
 
         // Auto request, non-bonus pool exhausted: lend a bonus beam only while the
         // number of beams currently in use is below the mastery-scaled auto capacity.
+        // inUse counts ALL busy beams (no per-beam auto/manual ownership tag exists),
+        // so this is conservative by design: auto never occupies more than extraAuto
+        // bonus beams, and if manual targeting is borrowing simultaneously, auto may
+        // promote slightly fewer. Intentional — see the design spec's risk notes.
         int inUse = __instance.tractorBeams.Count(b => b.HasTarget());
         if (inUse < AutoCap(__instance))
         {
