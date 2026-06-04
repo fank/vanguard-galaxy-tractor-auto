@@ -123,9 +123,9 @@ internal static class TractorModulePatches
             return;
 
         // AddMainSubStat(name, amount) renders the pair in the stat block; vanilla passes
-        // (count, label). We pass the descriptor as the "name" and an arrow marker as the
-        // "amount". Formatting is tuned in-game in a later step.
+        // (count, label). ASCII only — the pixel font tofus arbitrary glyphs. Exact split
+        // is tuned in-game in a later step.
         _mainSubStats(__instance).AddMainSubStat(
-            "Auto-tractor (scales with Autopilot mastery) (VGTractorAuto)", "→");
+            "Auto-tractor (scales with Autopilot mastery) (VGTractorAuto)", "+");
     }
 }
