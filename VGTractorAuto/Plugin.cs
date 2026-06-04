@@ -13,7 +13,7 @@ public class Plugin : BaseUnityPlugin
     public const string PluginGuid = "vgtractorauto";
     public const string PluginName = "Vanguard Galaxy Tractor Auto";
     // BepInEx parses PluginVersion through System.Version — plain N.N.N only.
-    public const string PluginVersion = "0.1.0";
+    public const string PluginVersion = "0.2.0";
 
     internal static Plugin Instance { get; private set; } = null!;
     internal static ManualLogSource Log { get; private set; } = null!;
@@ -35,6 +35,7 @@ public class Plugin : BaseUnityPlugin
 
         _harmony = new Harmony(PluginGuid);
         _harmony.PatchAll(typeof(Patches.TractorModulePatches));
+        _harmony.PatchAll(typeof(Patches.MasteryTooltipPatches));
         Log.LogInfo($"{PluginName} v{PluginVersion} loaded ({_harmony.GetPatchedMethods().Count()} patches)");
     }
 
