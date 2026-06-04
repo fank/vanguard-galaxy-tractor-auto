@@ -34,7 +34,7 @@ public class Plugin : BaseUnityPlugin
             "free beam. When false, vanilla behavior is fully restored.");
 
         _harmony = new Harmony(PluginGuid);
-        // Patch class is registered in Task 5.
+        _harmony.PatchAll(typeof(Patches.TractorModulePatches));
         Log.LogInfo($"{PluginName} v{PluginVersion} loaded ({_harmony.GetPatchedMethods().Count()} patches)");
     }
 
