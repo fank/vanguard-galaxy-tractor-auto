@@ -1,0 +1,11 @@
+bin/
+obj/
+# lib/ holds symlinks to the VGTTS publicized Assembly-CSharp.dll — never commit the binary
+*/lib/*.dll
+*.user
+.vs/
+.idea/
+*.sln.iml
+*.local
+.claude/
+dist/
