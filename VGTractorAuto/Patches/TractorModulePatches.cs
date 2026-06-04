@@ -1,27 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
-using Behaviour.Crew;
+using System.Reflection;
 using Behaviour.Equipment.Module;
 using Behaviour.Tractoring;
 using Behaviour.Weapons;
 using HarmonyLib;
-using System.Reflection;
-using Source.Personnel;
-using Source.Player;
-using Source.Util;
-using UnityEngine;
 
 namespace VGTractorAuto.Patches;
 
 [HarmonyPatch(typeof(TractorModule))]
 internal static class TractorModulePatches
 {
-    // Cached "Autopilot" skill tree — internally the Engineering / "PromptEngineering"
-    // specialization (IdleManager feeds its mastery XP while autopilot runs). We reuse
-    // its mastery level as the scaling axis. Resolved lazily on first successful lookup
-    // so we survive null windows during init.
-    private static Skilltree? _autopilotTree;
-
     // Vanilla's private crew-pod target filter (blocks hostile/non-roll crew pods when
     // crew/brig space is full). Not exposed by the publicized stub we compile against,
     // so we bind it reflectively; null on older builds that lack it → treated as not
@@ -42,38 +31,9 @@ internal static class TractorModulePatches
 
     private static bool Enabled => Plugin.Instance != null && Plugin.Instance.CfgEnabled.Value;
 
-    // Live Engineering-tree mastery for the player commander. Returns 0 (→ vanilla)
-    // whenever the player, the tree, or its skill-tree data is unavailable.
-    private static int ResolveMasteryLevel()
-    {
-        if (GamePlayer.current == null || GamePlayer.current.commander == null)
-            return 0;
-
-        if (_autopilotTree == null)
-        {
-            _autopilotTree = Skilltree.Get(
-                SkillTreeData.GetSpecializationTreeName(CommanderSpecialization.Engineering));
-        }
-
-        return _autopilotTree == null ? 0 : _autopilotTree.GetMasteryLevel();
-    }
-
-    // Pure: how many bonus (manual) beams are promoted to auto at this mastery.
-    // extraAuto = floor( clamp01(mastery / cap) * amountOfBonusBeams )
-    internal static int ComputeExtraAuto(int masteryLevel, int cap, int amountOfBonusBeams)
-    {
-        if (cap <= 0 || amountOfBonusBeams <= 0)
-            return 0;
-        float pct = Mathf.Clamp01((float)masteryLevel / cap);
-        return Mathf.FloorToInt(pct * amountOfBonusBeams);
-    }
-
     // Max beams auto-targeting may occupy: base auto beams + mastery-scaled bonus beams.
     private static int AutoCap(TractorModule module)
-    {
-        int extraAuto = ComputeExtraAuto(ResolveMasteryLevel(), GameMath.maxLevel, module.amountOfBonusBeams);
-        return module.amountOfBeams + extraAuto;
-    }
+        => module.amountOfBeams + AutopilotMastery.ExtraAuto(module.amountOfBonusBeams);
 
     private static TractorBeam? FirstFreeBeam(TractorModule module)
     {
