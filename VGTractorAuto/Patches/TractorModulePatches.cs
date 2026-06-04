@@ -33,6 +33,13 @@ internal static class TractorModulePatches
         => _isCrewPodTargetingBlocked != null
             && (bool)_isCrewPodTargetingBlocked.Invoke(module, new object[] { item });
 
+    // The publicized stub exposes `tractorBeams` as public, but it is private in the
+    // shipped DLL — Mono enforces field access checks at runtime (unlike public
+    // methods), so direct access throws FieldAccessException. Bind it through a Harmony
+    // FieldRef, whose dynamic accessor skips the visibility check.
+    private static readonly AccessTools.FieldRef<TractorModule, List<TractorBeam>> _tractorBeams =
+        AccessTools.FieldRefAccess<TractorModule, List<TractorBeam>>("tractorBeams");
+
     private static bool Enabled => Plugin.Instance != null && Plugin.Instance.CfgEnabled.Value;
 
     // Live Engineering-tree mastery for the player commander. Returns 0 (→ vanilla)
@@ -70,7 +77,7 @@ internal static class TractorModulePatches
 
     private static TractorBeam? FirstFreeBeam(TractorModule module)
     {
-        foreach (TractorBeam beam in module.tractorBeams)
+        foreach (TractorBeam beam in _tractorBeams(module))
         {
             if (!beam.HasTarget())
                 return beam;
@@ -102,7 +109,7 @@ internal static class TractorModulePatches
         // so this is conservative by design: auto never occupies more than extraAuto
         // bonus beams, and if manual targeting is borrowing simultaneously, auto may
         // promote slightly fewer. Intentional — see the design spec's risk notes.
-        int inUse = __instance.tractorBeams.Count(b => b.HasTarget());
+        int inUse = _tractorBeams(__instance).Count(b => b.HasTarget());
         if (inUse < AutoCap(__instance))
         {
             TractorBeam? promoted = FirstFreeBeam(__instance);
