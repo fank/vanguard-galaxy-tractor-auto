@@ -122,10 +122,11 @@ internal static class TractorModulePatches
         if (!Enabled || __instance.amountOfBonusBeams <= 0)
             return;
 
-        // AddMainSubStat(name, amount) renders the pair in the stat block; vanilla passes
-        // (count, label). ASCII only — the pixel font tofus arbitrary glyphs. Exact split
-        // is tuned in-game in a later step.
+        // Rendered as "  {Translate(name)} {amount}" (see CompareTooltip). We have no
+        // numeric value, so the whole descriptor goes in the name slot and amount is
+        // empty — otherwise a stray value renders at the end of the line. ASCII only (the
+        // pixel font tofus arbitrary glyphs).
         _mainSubStats(__instance).AddMainSubStat(
-            "Auto-tractor (scales with Autopilot mastery) (VGTractorAuto)", "+");
+            "Manual beams also auto-tractor, scales with Autopilot mastery (VGTractorAuto)", "");
     }
 }
