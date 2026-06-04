@@ -29,6 +29,11 @@ internal static class TractorModulePatches
     private static readonly AccessTools.FieldRef<TractorModule, List<TractorBeam>> _tractorBeams =
         AccessTools.FieldRefAccess<TractorModule, List<TractorBeam>>("tractorBeams");
 
+    // `mainSubStats` is a protected field on AbstractEquipment — same runtime
+    // FieldAccessException trap as tractorBeams, so reach it via FieldRef.
+    private static readonly AccessTools.FieldRef<Behaviour.Equipment.AbstractEquipment, Behaviour.Equipment.MainSubStats> _mainSubStats =
+        AccessTools.FieldRefAccess<Behaviour.Equipment.AbstractEquipment, Behaviour.Equipment.MainSubStats>("mainSubStats");
+
     private static bool Enabled => Plugin.Instance != null && Plugin.Instance.CfgEnabled.Value;
 
     // Max beams auto-targeting may occupy: base auto beams + mastery-scaled bonus beams.
@@ -105,5 +110,22 @@ internal static class TractorModulePatches
                 filtered.Add(item);
             }
         }
+    }
+
+    // Static disclosure line on the installed tractor-beam tooltip. SetMainSubStats is
+    // built once and cached, so this is static text (the live % lives on the mastery
+    // tooltip). Only shown when the module actually has manual beams to convert.
+    [HarmonyPostfix]
+    [HarmonyPatch("SetMainSubStats")]
+    private static void SetMainSubStats_Postfix(TractorModule __instance)
+    {
+        if (!Enabled || __instance.amountOfBonusBeams <= 0)
+            return;
+
+        // AddMainSubStat(name, amount) renders the pair in the stat block; vanilla passes
+        // (count, label). We pass the descriptor as the "name" and an arrow marker as the
+        // "amount". Formatting is tuned in-game in a later step.
+        _mainSubStats(__instance).AddMainSubStat(
+            "Auto-tractor (scales with Autopilot mastery) (VGTractorAuto)", "→");
     }
 }
