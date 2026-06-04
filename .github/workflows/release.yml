@@ -1,0 +1,87 @@
+name: Package release
+
+# Triggers when a GitHub Release is published. Also runnable manually.
+#
+# The plugin references Assembly-CSharp.dll (the game's proprietary assembly),
+# which can't live on a public runner, so the repo commits a PUBLICIZED stub
+# (method signatures only, no IL) at VGTractorAuto/lib/. CI compiles against the
+# stub; the real runtime assembly takes over in-game via Mono's late binding.
+# (BepInEx / HarmonyX / UnityEngine come from NuGet as compile-only refs.)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to (re)package"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+    steps:
+      - name: Checkout repo at release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Verify publicized reference is committed
+        run: |
+          path="VGTractorAuto/lib/Assembly-CSharp.dll"
+          if [ ! -s "$path" ]; then
+            echo "::error::$path is missing or empty. Regenerate via 'assembly-publicizer --strip <game>/Assembly-CSharp.dll -o $path' and commit. (--strip is required.)"
+            exit 1
+          fi
+          echo "Publicized reference present: $path ($(du -h "$path" | cut -f1))"
+
+      - name: Build VGTractorAuto.dll
+        run: dotnet build VGTractorAuto/VGTractorAuto.csproj -c Debug --nologo
+
+      - name: Stage release layout
+        id: stage
+        run: |
+          VERSION=$(grep 'PluginVersion =' VGTractorAuto/Plugin.cs | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          PKG_NAME="VGTractorAuto-v${VERSION}"
+          # Nested VGTractorAuto/ is intentional: it's the folder the user
+          # drops into BepInEx/plugins/.
+          PKG_DIR="dist/${PKG_NAME}/VGTractorAuto"
+
+          rm -rf "dist/${PKG_NAME}"
+          mkdir -p "$PKG_DIR"
+
+          # *.dll = VGTractorAuto.dll only — BepInEx/Harmony/Unity are compile-only,
+          # so nothing else lands in the build output.
+          cp VGTractorAuto/bin/Debug/netstandard2.1/*.dll "$PKG_DIR/"
+          [ -f README.md ] && cp README.md "$PKG_DIR/" || true
+          [ -f LICENSE ] && cp LICENSE "$PKG_DIR/" || true
+
+          SIZE=$(du -sh "$PKG_DIR" | cut -f1)
+          echo "Staged DLL — $SIZE at $PKG_DIR"
+
+          echo "pkg_name=${PKG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Zip release bundle
+        run: |
+          (cd "dist/${{ steps.stage.outputs.pkg_name }}" && \
+             zip -qr "../${{ steps.stage.outputs.pkg_name }}.zip" VGTractorAuto)
+          ls -lh "dist/${{ steps.stage.outputs.pkg_name }}.zip"
+
+      - name: Upload zip to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" "dist/${{ steps.stage.outputs.pkg_name }}.zip" --clobber
+          echo "Uploaded ${{ steps.stage.outputs.pkg_name }}.zip to release $TAG"
