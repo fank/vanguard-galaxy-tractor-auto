@@ -11,7 +11,7 @@ namespace VGTractorAuto;
 public class Plugin : BaseUnityPlugin
 {
     public const string PluginGuid = "vgtractorauto";
-    public const string PluginName = "Vanguard Galaxy Tractor Auto";
+    public const string PluginName = "Tractor Auto";
     // BepInEx parses PluginVersion through System.Version — plain N.N.N only.
     public const string PluginVersion = "0.2.0";
 

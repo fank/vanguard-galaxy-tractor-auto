@@ -1,4 +1,4 @@
-# Vanguard Galaxy Tractor Auto (VGTractorAuto)
+# Tractor Auto (VGTractorAuto)
 
 A BepInEx 5 plugin for [Vanguard Galaxy](https://store.steampowered.com/app/3471800/) that lets your ship's **Manual Tractor Beams act as automatic beams too**, with the converted share scaling by your Autopilot (Engineering) skill-tree mastery.
 
@@ -23,7 +23,7 @@ A tractor module ships with two beam pools: a set of automatic beams that grab l
    ```
 5. **Launch the game.** The BepInEx console shows a load line, e.g.:
    ```
-   [Info :Vanguard Galaxy Tractor Auto] Vanguard Galaxy Tractor Auto v0.2.0 loaded (4 patches)
+   [Info :Tractor Auto] Tractor Auto v0.2.0 loaded (4 patches)
    ```
 
 ## Uninstall
